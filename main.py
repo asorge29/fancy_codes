@@ -44,11 +44,14 @@ for i in range(len(results["tracks"]["items"])):
 
 selected = int(input("Choose a song: ")) - 1
 
-code_image = requests.get(f"https://spotifycodes.com/downloadCode.php?uri=png%2F000000%2Fwhite%2F640%2F{quote(results["tracks"]["items"][selected]["uri"])}")
-with open(f"{results["tracks"]["items"][i]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png", "wb") as f:
-    f.write(code_image.content)
-new_image = convert_color_to_transparent(f"{results["tracks"]["items"][selected]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png", (0, 0, 0), tolerance=200)
-new_image.save(f"{results["tracks"]["items"][selected]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png")
+code_image_response = requests.get(f"https://spotifycodes.com/downloadCode.php?uri=png%2Fffffff%2Fblack%2F640%2F{quote(results["tracks"]["items"][selected]["uri"])}")
+with open(f"{results["tracks"]["items"][selected]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png", "wb") as f:
+    f.write(code_image_response.content)
+new_image = convert_color_to_transparent(f"{results["tracks"]["items"][selected]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png", (255, 255, 255), tolerance=200)
+new_image = new_image.resize((new_image.width*2, new_image.height*2))
+new_image = new_image.resize((new_image.width//2, new_image.height//2), resample=Image.LANCZOS)
+code_file_name = f"{results["tracks"]["items"][selected]["name"]}-{results["tracks"]["items"][selected]["artists"][0]["name"]}.png"
+new_image.save(code_file_name)
 
 img_x = input("Enter the width of the image: ")
 img_y = input("Enter the height of the image: ")
@@ -62,8 +65,15 @@ cp.remove(bg)
 
 background.generate_bg(bg)
 
-background.generate_layer_one("Mosaic", "Circles", cp, randint(10, 31), randint(50, 401))
+background.generate_layer_one("Striped Horizontal", "Curves", cp, 10, [50,60])
 
-background.generate_layer_two("Cornered", "Rings", cp, randint(10, 31), randint(50, 401))
+background.generate_layer_two("Cornered", "Rings", cp, 10, [50, 51])
 
 background.save("background")
+
+bg_img = Image.open("background.png")
+bg_img_w, bg_img_h = bg_img.size
+code_image = new_image
+code_image_w, code_image_h = code_image.size
+bg_img.paste(code_image, ((bg_img_w - code_image_w)//2, (bg_img_h - code_image_h)//2), code_image)
+bg_img.save("result.png")

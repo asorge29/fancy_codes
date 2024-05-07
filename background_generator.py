@@ -1,8 +1,6 @@
 from random import randint
 import pygame as pg
-from tkinter import *
-from tkinter.filedialog import asksaveasfilename
-
+from pygame import gfxdraw
 SW, SH = 1280, 720
 
 art_styles_list = [
@@ -38,17 +36,6 @@ class Canvas:
         self.layer_one = pg.Surface((self.width, self.height), pg.SRCALPHA)
         self.layer_two = pg.Surface((self.width, self.height), pg.SRCALPHA)
         self.fg_layer = pg.Surface((self.width, self.height), pg.SRCALPHA)
-
-    def export_art(self):
-        tkinter_window = Tk()
-        tkinter_window.withdraw()
-
-        available_formats = [("Portable Network Graphics", "*.png")]
-        filename = asksaveasfilename(title="Export File", filetypes=available_formats)
-
-        if filename:
-            name = filename[:]
-            return name
 
     def clean_all_layers(self):
         self.layer_one.fill((0, 0, 0, 0))
@@ -578,7 +565,7 @@ class Canvas:
                         multiples_points[k].append((x, y+k))
 
                 for k in range(multiples):
-                    pg.gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
+                    gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
 
         if style == art_styles_list[1]:     # Striped Horizontal
             multiples = magnitude // 5
@@ -603,7 +590,7 @@ class Canvas:
                         multiples_points[k].append((x_pos, y_pos+k))
 
                 for k in range(multiples):
-                    pg.gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
+                    gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
 
         if style == art_styles_list[2]:     # Striped Vertical
             point_count = 5
@@ -628,7 +615,7 @@ class Canvas:
                         multiples_points[k].append((x_pos+k, y_pos))
 
                 for k in range(multiples):
-                    pg.gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
+                    gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
 
         if style == art_styles_list[3]:     # Mosaic
             row_curve_count = int(complexity // 2)
@@ -657,7 +644,7 @@ class Canvas:
                             multiples_points[m].append((x, y+m))
 
                     for m in range(multiples):
-                        pg.gfxdraw.bezier(layer, multiples_points[m], 5, pg.Color(current_color))
+                        gfxdraw.bezier(layer, multiples_points[m], 5, pg.Color(current_color))
 
         if style == art_styles_list[4]:     # Cornered
             corner_starts = [((0, self.width//3),(-1, 0)),
@@ -700,7 +687,7 @@ class Canvas:
                     multiples_points[k].append(last_point)
 
                 for k in range(multiples):
-                    pg.gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
+                    gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
 
         if style == art_styles_list[5]:     # Centered
             curve_count = complexity // 5
@@ -732,7 +719,7 @@ class Canvas:
                         multiples_points[k].append((x, y+k))
 
                 for k in range(multiples):
-                    pg.gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
+                    gfxdraw.bezier(layer, multiples_points[k], 5, pg.Color(current_color))
 
         if style == art_styles_list[6]:     # Empty
             pass
@@ -874,7 +861,10 @@ class Canvas:
         self.canvas.blit(self.layer_two, (0, 0))
         self.canvas.blit(self.fg_layer, (0, 0))
         self.canvas.convert()
-        self.display_canvas = pg.transform.smoothscale(self.canvas, self.display_size)
 
     def save(self, filename:str):
-        pg.image.save(self.display_canvas, f"{filename}.png")
+        pg.init()
+        pg.display.set_mode((0, 0))
+        self.blit_to_canvas()
+        pg.image.save(self.canvas, f"{filename}.png")
+        pg.quit()
