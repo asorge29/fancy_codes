@@ -860,11 +860,9 @@ class Canvas:
         self.canvas.blit(self.layer_one, (0, 0))
         self.canvas.blit(self.layer_two, (0, 0))
         self.canvas.blit(self.fg_layer, (0, 0))
-        self.canvas.convert()
 
     def save(self, filename:str):
         pg.init()
-        pg.display.set_mode((0, 0))
         self.blit_to_canvas()
         pg.image.save(self.canvas, f"{filename}.png")
         pg.quit()
