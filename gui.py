@@ -5,9 +5,32 @@ from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from streamlit_card import card
+import requests
+from urllib.parse import quote
 
 load_dotenv()
 spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
+
+def selectIndex(index):
+    st.session_state.selectedIndex = index
+
+@st.cache_data(show_spinner=False)
+def searchSpotify(query):
+    return spotify.search(searchQuery, type='track', limit=10)
+
+@st.cache_data
+def getCode(uri:str, bg:hex, color:str="black"):
+    codeImageResponse = requests.get(f"https://spotifycodes.com/downloadCode.php?uri=png%2F{bg}%2F{color}%2F640%2F{quote(uri)}")
+    return codeImageResponse.content
+
+st.set_page_config(
+    page_title="Fancy Spotify Codes",
+    page_icon="🎶",
+    layout="wide",
+)
+
+if "selectedIndex" not in st.session_state:
+    st.session_state.selectedIndex = None
 
 CARD_STYLE = {"card": {"margin":"0px", "width": "100%"}}
 st.title("Fancy Spotify Codes")
@@ -18,17 +41,22 @@ with mainCols[0]:
     st.header("1. Select a Song")
     searchQuery = st.text_input("Search a Song on Spotify")
     if searchQuery:
-        searchResults = spotify.search(searchQuery, type='track', limit=10)
-        tracksFromResults = [i["name"] for i in searchResults["tracks"]["items"]]
-        artistsFromResults = [i["artists"][0]["name"] for i in searchResults["tracks"]["items"]]
-        albumCoverFromResults = [i["album"]["images"][0]["url"] for i in searchResults["tracks"]["items"]]
-        resultsCols = st.columns(2)
-        with resultsCols[0]:
-            for i in range(0, len(tracksFromResults), 2):
-                card(tracksFromResults[i], artistsFromResults[i], albumCoverFromResults[i], styles=CARD_STYLE)
-        with resultsCols[1]:
-            for i in range(1, len(tracksFromResults), 2):
-                card(tracksFromResults[i], artistsFromResults[i], albumCoverFromResults[i], styles=CARD_STYLE)
+        with st.spinner("Fetching Songs..."):
+            searchResults = searchSpotify(searchQuery)
+            tracksFromResults = [i["name"] for i in searchResults["tracks"]["items"]]
+            artistsFromResults = [i["artists"][0]["name"] for i in searchResults["tracks"]["items"]]
+            albumCoverFromResults = [i["album"]["images"][0]["url"] for i in searchResults["tracks"]["items"]]
+            resultsCols = st.columns(2)
+            with resultsCols[0]:
+                for i in range(0, len(tracksFromResults), 2):
+                    card(tracksFromResults[i], artistsFromResults[i], albumCoverFromResults[i], styles=CARD_STYLE)
+                    if st.button("Select", key=(i+5)**2, use_container_width=True):
+                        selectIndex(i)
+            with resultsCols[1]:
+                for i in range(1, len(tracksFromResults), 2):
+                    card(tracksFromResults[i], artistsFromResults[i], albumCoverFromResults[i], styles=CARD_STYLE)
+                    if st.button("Select", key=(i+5)**2, use_container_width=True):
+                        selectIndex(i)
 
 with mainCols[1]:
     st.header("2. Create the Background")
