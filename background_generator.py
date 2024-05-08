@@ -1,6 +1,7 @@
 from random import randint
 import pygame as pg
 from pygame import gfxdraw
+from PIL import Image
 SW, SH = 1280, 720
 
 art_styles_list = [
@@ -866,3 +867,10 @@ class Canvas:
         self.blit_to_canvas()
         pg.image.save(self.canvas, f"{filename}.png")
         pg.quit()
+
+    def makeImage(self):
+        pg.init()
+        self.blit_to_canvas()
+        imageBytes = pg.image.tobytes(self.canvas, "RGBA")
+        finalImage = Image.frombytes("RGBA", self.canvas.get_size(), imageBytes)
+        return finalImage

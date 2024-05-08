@@ -9,6 +9,8 @@ from streamlit_card import card
 import requests
 from urllib.parse import quote
 from random import choice
+from PIL import Image
+from io import BytesIO
 
 load_dotenv()
 spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
@@ -16,19 +18,44 @@ spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials())
 def selectIndex(index):
     st.session_state.selectedIndex = index
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, max_entries=1)
 def searchSpotify(query):
     return spotify.search(searchQuery, type='track', limit=10)
 
-@st.cache_data(show_spinner=False)
-def getCode(uri:str, bg:hex, color:str="black"):
+@st.cache_data(show_spinner=False, max_entries=2)
+def getCode(uri:str, color:str="black"):
+    color = color.lower()
+    if color != "white":
+        color = "black"
+    if color == "black":
+        bg = "ffffff"
+        target = (255, 255, 255)
+    else:
+        bg = "000000"
+        target = (0, 0, 0)
     codeImageResponse = requests.get(f"https://spotifycodes.com/downloadCode.php?uri=png%2F{bg}%2F{color}%2F640%2F{quote(uri)}")
-    return codeImageResponse.content
 
+    finalCodeImage = convert_color_to_transparent(codeImageResponse.content, target)
 
+    return finalCodeImage
+
+def convert_color_to_transparent(bytes, target_color, tolerance=200):
+    image = Image.open(BytesIO(bytes))
+    image = image.convert("RGBA")
+    pixel_data = image.getdata()
+    new_pixel_data = []
+    for pixel in pixel_data:
+        if all(abs(pixel[i] - target_color[i]) <= tolerance for i in range(3)):
+            new_pixel_data.append((pixel[0], pixel[1], pixel[2], 0))
+        else:
+            new_pixel_data.append(pixel)
+    image.putdata(new_pixel_data)
+    return image
+
+@st.cache_data(show_spinner=False, max_entries=2)
 def generateBackground(paletteName, l1style, l1shape, l1complex, l1mag, l2style, l2shape, l2complex, l2mag):
     global customPalette
-    background = Canvas((1000, 400))
+    background = Canvas((700, 200))
     if paletteName != 'Custom':
         colorPaletteList = color_palettes[color_palette_names.index(paletteName)].copy()
     else:
@@ -38,8 +65,7 @@ def generateBackground(paletteName, l1style, l1shape, l1complex, l1mag, l2style,
     background.generate_bg(bg)
     background.generate_layer_one(l1style, l1shape, colorPaletteList, l1complex, l1mag)
     background.generate_layer_two(l2style, l2shape, colorPaletteList, l2complex, l2mag)
-    background.save("yes")
-
+    return background.makeImage()
 
 st.set_page_config(
     page_title="Fancy Spotify Codes",
@@ -92,7 +118,7 @@ with mainCols[1]:
 
     customPalette = [customColor1, customColor2, customColor3, customColor4]
 
-    st.radio("Code Color", ["White", "Black"])
+    codeColor = st.radio("Code Color", ["White", "Black"])
 
     layerCols = st.columns(2)
     with layerCols[0]:
@@ -109,8 +135,23 @@ with mainCols[1]:
         layer2Complexity = st.slider("Set the randomness for layer 2:", 10, 30)
         layer2Magnitude = [50, st.slider("Set the max shape size for layer 2:", 60, 400)]
 
+if st.session_state.selectedIndex is not None:
+    codeImage = getCode(searchResults["tracks"]["items"][st.session_state.selectedIndex]["uri"], codeColor)
+
     backgroundImage = generateBackground(colorPalette, layer1Style, layer1Shape, layer1Complexity, layer1Magnitude, layer2Style, layer2Shape, layer2Complexity, layer2Magnitude)
+
+    backgroundImage.paste(codeImage, ((backgroundImage.width-codeImage.width)//2, (backgroundImage.height-codeImage.height)//2), codeImage)
 
 with mainCols[2]:
     st.header("3. Download the Result")
-    st.image("yes.png")
+    if st.session_state.selectedIndex is not None:
+        st.image(backgroundImage)
+        backgroundImageBytes = BytesIO()
+        backgroundImage.save(backgroundImageBytes, format='PNG')
+        backgroundImage_bytes = backgroundImageBytes.getvalue()
+        st.download_button(
+            label="Save as Image",
+            data=backgroundImage_bytes,
+            file_name=f"{tracksFromResults[st.session_state.selectedIndex]} Spotify Code.png",
+            mime="image/png"
+        )
